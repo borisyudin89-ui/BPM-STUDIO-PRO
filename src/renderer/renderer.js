@@ -63,7 +63,14 @@
     r.el.appendChild(b);
   }
 
+  function updateButtons() {
+    const can = selected().some((r) => r.status === 'done');
+    document.getElementById('x2').disabled = !can;
+    document.getElementById('d2').disabled = !can;
+  }
+
   function updateStatus() {
+    updateButtons();
     $empty.hidden = rows.length > 0;
     const total = rows.length;
     const done = rows.filter((r) => r.status === 'done').length;
@@ -126,6 +133,7 @@
   function selected() { return rows.filter((r) => r.selected); }
   function setSelection(list) {
     rows.forEach((r) => { const s = list.includes(r); if (r.selected !== s) { r.selected = s; renderRow(r); } });
+    updateButtons();
   }
   $rows.addEventListener('mousedown', (e) => {
     const el = e.target.closest('.row.item');
@@ -228,6 +236,8 @@
     ]);
   });
   document.getElementById('clear').addEventListener('click', clearAll);
+  document.getElementById('x2').addEventListener('click', () => scaleSelected(2));
+  document.getElementById('d2').addEventListener('click', () => scaleSelected(0.5));
 
   // ---- перетаскивание файлов и папок
   window.addEventListener('dragover', (e) => { e.preventDefault(); $list.classList.add('over'); });

@@ -43,3 +43,7 @@ body {
 #list::-webkit-scrollbar { width: 10px; }
 #list::-webkit-scrollbar-thumb { background: var(--line); }
 #list::-webkit-scrollbar-track { background: var(--list); }
+#scale { display: flex; gap: 4px; margin-right: 6px; }
+#status #scale button { width: 28px; height: 18px; border: 1px solid #3A4048; border-radius: 3px; color: var(--text); font-size: 11px; }
+#status #scale button:hover:not(:disabled) { text-decoration: none; border-color: var(--accent); }
+#status #scale button:disabled { opacity: 0.35; cursor: default; }

@@ -41,7 +41,7 @@ function ff(args) {
       try {
         ff(['-i', base, ...extra, out]);
       } catch (e) {
-        record('формат ' + ext, 'файл создан', 'ffmpeg не умеет кодировать: ' + e.message.slice(0, 80), false);
+        console.log('SKIP формат ' + ext + ': эта сборка ffmpeg не умеет кодировать (' + e.message.slice(0, 60) + ')');
         continue;
       }
       const r = await analyzeFile(out);

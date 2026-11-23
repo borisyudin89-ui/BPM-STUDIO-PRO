@@ -1,7 +1,7 @@
 {
   "name": "bpm-studio-pro",
   "productName": "BPM Studio Pro",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "BPM Studio Pro — определение темпа и тональности аудиофайлов",
   "main": "src/main.js",
   "author": "BPM Studio Pro",
@@ -11,7 +11,8 @@
     "start": "electron .",
     "test": "node test/run.js",
     "icon": "node scripts/make-icon.js",
-    "dist": "electron-builder --win --x64"
+    "dist": "electron-builder --win --x64",
+    "dist:mac": "electron-builder --mac dmg"
   },
   "dependencies": {
     "@fontsource/inter": "^5.1.0",
@@ -55,6 +56,18 @@
       "oneClick": true,
       "perMachine": false,
       "deleteAppDataOnUninstall": true
+    },
+    "afterPack": "scripts/adhoc-sign.js",
+    "mac": {
+      "category": "public.app-category.music",
+      "icon": "build/icon.png",
+      "identity": null,
+      "target": [
+        {
+          "target": "dmg"
+        }
+      ],
+      "artifactName": "BPM-Studio-Pro-${version}-mac-${arch}.dmg"
     }
   }
 }

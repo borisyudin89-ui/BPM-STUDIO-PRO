@@ -9,8 +9,20 @@ permissions:
   contents: write
 
 jobs:
-  windows:
-    runs-on: windows-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows
+            os: windows-latest
+          - name: mac-intel
+            os: macos-15-intel
+            arch: x64
+          - name: mac-silicon
+            os: macos-15
+            arch: arm64
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -24,10 +36,16 @@ jobs:
       - name: Tests (точность темпа, форматы, обнуление)
         run: npm test
 
-      - name: Build installer
+      - name: Build installer (Windows)
+        if: runner.os == 'Windows'
         run: npm run dist
 
-      - name: Smoke test (собранное приложение, настоящее окно)
+      - name: Build dmg (Mac)
+        if: runner.os == 'macOS'
+        run: npm run dist:mac -- --${{ matrix.arch }}
+
+      - name: Smoke test (Windows, собранное приложение)
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           node scripts/make-wav.js "$env:RUNNER_TEMP\smoke.wav" 128
@@ -51,23 +69,57 @@ jobs:
           Write-Host 'PNGEND'
           if (@($left).Count -gt 0 -or @($procs).Count -gt 0) { exit 1 }
 
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: smoke-screenshot
-          path: smoke.png
-          if-no-files-found: ignore
+      - name: Smoke test (Mac, собранное приложение)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          node scripts/make-wav.js "$RUNNER_TEMP/smoke.wav" 128
+          APP=$(ls -d dist/mac*/*.app | head -1)
+          echo "app: $APP"
+          codesign -dv "$APP" 2>&1 | head -5 || true
+          export BPM_SMOKE=1 BPM_SMOKE_FILE="$RUNNER_TEMP/smoke.wav" BPM_SMOKE_OUT="$PWD/smoke.png" BPM_SMOKE_RESULT="$PWD/smoke.json"
+          "$APP/Contents/MacOS/BPM Studio Pro" > smoke.out 2>&1 &
+          PID=$!
+          for i in $(seq 1 75); do kill -0 $PID 2>/dev/null || break; sleep 2; done
+          if kill -0 $PID 2>/dev/null; then kill -9 $PID; echo 'smoke: зависло'; tail -20 smoke.out; exit 1; fi
+          sleep 5
+          cat smoke.json || { echo 'нет результата'; tail -30 smoke.out; exit 1; }
+          echo
+          grep -q '"ok":true' smoke.json || exit 1
+          LEFT=$(ls -d "${TMPDIR:-/tmp}"/bpm-studio-pro-* 2>/dev/null | wc -l | tr -d ' ')
+          PROCS=$(pgrep -f 'ffmpeg-static|BPM Studio Pro' | wc -l | tr -d ' ')
+          echo "остались временные папки: $LEFT"
+          echo "остались процессы: $PROCS"
+          echo PNGBEGIN
+          base64 < smoke.png | tr -d '\n' | fold -w 3000 | sed 's/^/PNG:/'
+          echo
+          echo PNGEND
+          [ "$LEFT" = "0" ] && [ "$PROCS" = "0" ]
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BPM-Studio-Pro-Windows
-          path: dist/*.exe
+          name: dist-${{ matrix.name }}
+          path: |
+            dist/*.exe
+            dist/*.dmg
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: out
 
       - name: Publish release
-        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          gh release create "v0.1.${{ github.run_number }}" dist/*.exe \
-            --title "BPM Studio Pro v0.1.${{ github.run_number }}" \
-            --notes "Установщик для Windows. Двойной клик по файлу, дальше всё само."
+          ls -la out
+          gh release create "v0.2.${{ github.run_number }}" out/* \
+            --title "BPM Studio Pro v0.2.${{ github.run_number }}" \
+            --notes "Windows: установщик .exe. Mac: .dmg отдельно для Intel (x64) и для Apple Silicon (arm64). Подробности в README."
