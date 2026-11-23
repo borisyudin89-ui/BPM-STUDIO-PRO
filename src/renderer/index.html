@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>BPM Studio Pro</title>
+<link rel="stylesheet" href="../../node_modules/@fontsource/inter/400.css">
+<link rel="stylesheet" href="../../node_modules/@fontsource/jetbrains-mono/400.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="head" class="row"><span>Файл</span><span>Тон</span><span>BPM</span></div>
+  <div id="list" tabindex="0">
+    <div id="empty">Перетащите файлы или папки сюда</div>
+    <div id="rows"></div>
+  </div>
+  <div id="status">
+    <span id="status-text">Готово</span>
+    <span id="status-links">
+      <button id="add" type="button">Добавить…</button>
+      <button id="clear" type="button" class="muted">Очистить</button>
+    </span>
+  </div>
+</div>
+<div id="menu" hidden></div>
+<script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        run: npm install
+
+      - name: Tests (точность темпа, форматы, обнуление)
+        run: npm test
+
+      - name: Build installer
+        run: npm run dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BPM-Studio-Pro-Windows
+          path: dist/*.exe
+
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v0.1.${{ github.run_number }}" dist/*.exe \
+            --title "BPM Studio Pro v0.1.${{ github.run_number }}" \
+            --notes "Установщик для Windows. Двойной клик по файлу, дальше всё само."
