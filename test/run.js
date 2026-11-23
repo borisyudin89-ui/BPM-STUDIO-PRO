@@ -45,6 +45,7 @@ function ff(args) {
         continue;
       }
       const r = await analyzeFile(out);
+      console.log('DIAG ' + ext + ' ' + JSON.stringify(r.diag));
       record('формат ' + ext, '128 ±0.5', r.bpm, Math.abs(r.bpm - 128) <= 0.5);
     }
 

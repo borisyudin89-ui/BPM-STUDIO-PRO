@@ -97,7 +97,7 @@ function tempoFromBeats(rhBpm, ticks) {
   }
   const shown = foldBpm(bpm);
   const k = shown / bpm;
-  return { bpm: shown, spread: spread * k, floating };
+  return { bpm: shown, spread: spread * k, floating, diag: { rh: rhBpm, ticks: n, first: ticks[0], last: ticks[n - 1], used: bpm } };
 }
 
 function analyzeKey(e, pcm) {
@@ -156,7 +156,8 @@ async function analyzeFile(file, hooks = {}) {
     floating: t.floating,
     key: k.key,
     keyStrength: k.keyStrength,
-    truncated
+    truncated,
+    diag: t.diag
   };
 }
 
