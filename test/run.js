@@ -46,7 +46,7 @@ function ff(args) {
       }
       const r = await analyzeFile(out);
       console.log('DIAG ' + ext + ' ' + JSON.stringify(r.diag));
-      record('формат ' + ext, '128 ±0.5', r.bpm, Math.abs(r.bpm - 128) <= 0.5);
+      record('формат ' + ext, '128 ±0.5, не «плавает»', r.bpm + ', floating=' + r.floating, Math.abs(r.bpm - 128) <= 0.5 && r.floating === false);
     }
 
     // 3. путь с пробелами, скобками и кириллицей

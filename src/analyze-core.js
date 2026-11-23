@@ -97,7 +97,7 @@ function tempoFromBeats(rhBpm, ticks) {
     }
     if (w.length >= 3) {
       w.sort((a, b) => a - b);
-      const range = percentile(w, 0.9) - percentile(w, 0.1);
+      const range = percentile(w, 0.8) - percentile(w, 0.2); // 20–80%: одиночный сбой трекера бита не считается «плаванием»
       spread = range / 2;
       floating = range / rhBpm > 0.03;
     }
