@@ -1,0 +1,28 @@
+name: diag
+on: workflow_dispatch
+jobs:
+  diag:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Скорость этапов
+        run: node scripts/diag.js
+      - name: Перетаскивание файла (настоящее событие drop)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          node scripts/make-wav.js "$env:RUNNER_TEMP\drop.wav" 128
+          $env:BPM_SMOKE = '1'
+          $env:BPM_SMOKE_MODE = 'drop'
+          $env:BPM_SMOKE_FILE = "$env:RUNNER_TEMP\drop.wav"
+          $env:BPM_SMOKE_OUT = "$PWD\drop.png"
+          $env:BPM_SMOKE_RESULT = "$PWD\drop.json"
+          $t = Get-Date
+          $p = Start-Process -FilePath "node_modules\electron\dist\electron.exe" -ArgumentList "." -PassThru
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); Write-Host 'DROP: зависло' }
+          Write-Host ("DROP: время до результата, сек: " + [int]((Get-Date) - $t).TotalSeconds)
+          if (Test-Path drop.json) { Write-Host ("DROP RESULT: " + (Get-Content drop.json)) } else { Write-Host 'DROP: нет результата' }

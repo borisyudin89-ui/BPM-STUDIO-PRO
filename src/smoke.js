@@ -13,10 +13,19 @@ module.exports = async function smoke(win) {
     app.quit();
   };
   try {
-    await wc.executeJavaScript('window.__bpmTest.addPaths([' + JSON.stringify(process.env.BPM_SMOKE_FILE) + '])');
+    if (process.env.BPM_SMOKE_MODE === 'drop') {
+      // настоящее перетаскивание: событие drop с путями файлов через протокол отладки
+      wc.debugger.attach('1.3');
+      const data = { items: [], files: [process.env.BPM_SMOKE_FILE], dragOperationsMask: 1 };
+      for (const type of ['dragEnter', 'dragOver', 'drop']) {
+        await wc.debugger.sendCommand('Input.dispatchDragEvent', { type, x: 200, y: 150, data });
+      }
+    } else {
+      await wc.executeJavaScript('window.__bpmTest.addPaths([' + JSON.stringify(process.env.BPM_SMOKE_FILE) + '])');
+    }
     const started = Date.now();
     let text = '';
-    while (Date.now() - started < 90000) {
+    while (Date.now() - started < (process.env.BPM_SMOKE_MODE === 'drop' ? 25000 : 90000)) {
       await new Promise((r) => setTimeout(r, 500));
       text = await wc.executeJavaScript(
         "(function(){var r=document.querySelector('#rows .row.item');return r?Array.from(r.children).map(function(c){return c.textContent}).join('|'):''})()"
@@ -24,7 +33,7 @@ module.exports = async function smoke(win) {
       if (/\|\d+\.\d\s*$/.test(text) || /ошибка/.test(text)) break;
     }
     // выберем строку и применим ×2, как это делает пользователь
-    await wc.executeJavaScript("document.querySelector('#rows .row.item').dispatchEvent(new MouseEvent('mousedown',{bubbles:true}))");
+    await wc.executeJavaScript("(function(){var r=document.querySelector('#rows .row.item');if(r)r.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}))})()");
     await new Promise((r) => setTimeout(r, 300));
     const img = await wc.capturePage();
     fs.writeFileSync(process.env.BPM_SMOKE_OUT, img.toPNG());
