@@ -180,6 +180,17 @@ function cleanup() {
   cleaned = true;
   cancelAll();
   try { fs.rmSync(tmpData, { recursive: true, force: true }); } catch (e) { /* ignore */ }
+  if (fs.existsSync(tmpData)) {
+    // Chromium ещё держит файлы: удалим папку маленьким отдельным процессом сразу после выхода
+    try {
+      const { spawn } = require('child_process');
+      const code = "setTimeout(function(){try{require('fs').rmSync(process.env.BPM_TMP,{recursive:true,force:true})}catch(e){}},1200)";
+      spawn(process.execPath, ['-e', code], {
+        detached: true, stdio: 'ignore', windowsHide: true,
+        env: { ELECTRON_RUN_AS_NODE: '1', BPM_TMP: tmpData }
+      }).unref();
+    } catch (e) { /* ignore */ }
+  }
 }
 
 app.whenReady().then(() => {

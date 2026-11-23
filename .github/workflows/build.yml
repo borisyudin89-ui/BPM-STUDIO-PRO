@@ -37,7 +37,7 @@ jobs:
           $env:BPM_SMOKE_RESULT = "$PWD\smoke.json"
           $p = Start-Process -FilePath "dist\win-unpacked\BPM Studio Pro.exe" -PassThru
           if (-not $p.WaitForExit(150000)) { $p.Kill(); Write-Host 'smoke: зависло'; exit 1 }
-          Start-Sleep -Seconds 3
+          Start-Sleep -Seconds 5
           Get-Content smoke.json
           $r = Get-Content smoke.json | ConvertFrom-Json
           if (-not $r.ok) { exit 1 }
@@ -45,6 +45,10 @@ jobs:
           Write-Host ("остались временные папки: " + @($left).Count)
           $procs = Get-Process -Name 'ffmpeg','BPM Studio Pro' -ErrorAction SilentlyContinue
           Write-Host ("остались процессы: " + @($procs).Count)
+          $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes("$PWD\smoke.png"))
+          Write-Host 'PNGBEGIN'
+          for ($i = 0; $i -lt $b64.Length; $i += 3000) { Write-Host ('PNG:' + $b64.Substring($i, [Math]::Min(3000, $b64.Length - $i))) }
+          Write-Host 'PNGEND'
           if (@($left).Count -gt 0 -or @($procs).Count -gt 0) { exit 1 }
 
       - uses: actions/upload-artifact@v4

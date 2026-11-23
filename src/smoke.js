@@ -10,7 +10,7 @@ module.exports = async function smoke(win) {
   const out = process.env.BPM_SMOKE_RESULT;
   const finish = (ok, info) => {
     try { fs.writeFileSync(out, JSON.stringify({ ok, info })); } catch (e) { /* ignore */ }
-    app.exit(ok ? 0 : 1);
+    app.quit();
   };
   try {
     await wc.executeJavaScript('window.__bpmTest.addPaths([' + JSON.stringify(process.env.BPM_SMOKE_FILE) + '])');
