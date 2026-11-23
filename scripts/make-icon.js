@@ -8,7 +8,7 @@ const N = 512;
 const SS = 4; // сглаживание: каждый пиксель считается по 4x4 подточкам
 const px = Buffer.alloc(N * N * 4);
 const BG = [0x1A, 0x1C, 0x1F];
-const LINE = [0x2E, 0x32, 0x38];
+const LINE = [0x4A, 0x52, 0x5C];
 const BLUE = [0x7A, 0x9C, 0xC6];
 
 function inRRect(x, y, x0, y0, x1, y1, r) {
@@ -24,12 +24,12 @@ function sample(x, y) {
   x = 256 + (x - 256) / 1.086;
   y = 256 + (y - 256) / 1.086;
   if (!inRRect(x, y, 24, 24, 488, 488, 104)) return null;
-  let c = inRRect(x, y, 26, 26, 486, 486, 102) ? BG : LINE;
+  let c = inRRect(x, y, 29, 29, 483, 483, 99) ? BG : LINE;
   const d = Math.hypot(x - 256, y - 256);
   let a = 0;
-  if (d <= 46) a = 1;
-  else if (Math.abs(d - 100) <= 9) a = 0.8;
-  else if (Math.abs(d - 152) <= 9) a = 0.45;
+  if (d <= 62) a = 1;
+  else if (Math.abs(d - 136) <= 12) a = 0.85;
+  else if (Math.abs(d - 206) <= 12) a = 0.55;
   if (a) c = [0, 1, 2].map((i) => c[i] * (1 - a) + BLUE[i] * a);
   return c;
 }
