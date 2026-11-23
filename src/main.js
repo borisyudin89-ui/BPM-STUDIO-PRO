@@ -168,7 +168,9 @@ function createWindow() {
   win.once('ready-to-show', () => win.show());
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  win.loadFile(path.join(__dirname, 'renderer', 'index.html')).then(() => {
+    if (process.env.BPM_SMOKE === '1') require('./smoke')(win);
+  });
   win.on('closed', () => { win = null; });
 }
 

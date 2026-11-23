@@ -87,7 +87,7 @@ function ff(args) {
       for (const n of fs.readdirSync(d)) {
         const p = path.join(d, n);
         if (fs.statSync(p).isDirectory()) walk(p);
-        else if (/\.(js|html)$/.test(n) && bad2.test(fs.readFileSync(p, 'utf8'))) offenders.push(path.relative(srcDir, p));
+        else if (n !== 'smoke.js' && /\.(js|html)$/.test(n) && bad2.test(fs.readFileSync(p, 'utf8'))) offenders.push(path.relative(srcDir, p));
       }
     })(srcDir);
     record('в коде нет сохранения данных на диск', 'нет совпадений', offenders.join(', ') || 'нет совпадений', offenders.length === 0);

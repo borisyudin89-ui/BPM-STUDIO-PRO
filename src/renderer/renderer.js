@@ -240,5 +240,6 @@
     }
   });
 
+  window.__bpmTest = { addPaths }; // используется только проверкой сборки
   updateStatus();
 })();

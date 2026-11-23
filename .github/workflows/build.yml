@@ -27,6 +27,33 @@ jobs:
       - name: Build installer
         run: npm run dist
 
+      - name: Smoke test (собранное приложение, настоящее окно)
+        shell: pwsh
+        run: |
+          node scripts/make-wav.js "$env:RUNNER_TEMP\smoke.wav" 128
+          $env:BPM_SMOKE = '1'
+          $env:BPM_SMOKE_FILE = "$env:RUNNER_TEMP\smoke.wav"
+          $env:BPM_SMOKE_OUT = "$PWD\smoke.png"
+          $env:BPM_SMOKE_RESULT = "$PWD\smoke.json"
+          $p = Start-Process -FilePath "dist\win-unpacked\BPM Studio Pro.exe" -PassThru
+          if (-not $p.WaitForExit(150000)) { $p.Kill(); Write-Host 'smoke: зависло'; exit 1 }
+          Start-Sleep -Seconds 3
+          Get-Content smoke.json
+          $r = Get-Content smoke.json | ConvertFrom-Json
+          if (-not $r.ok) { exit 1 }
+          $left = Get-ChildItem $env:TEMP -Directory -Filter 'bpm-studio-pro-*' -ErrorAction SilentlyContinue
+          Write-Host ("остались временные папки: " + @($left).Count)
+          $procs = Get-Process -Name 'ffmpeg','BPM Studio Pro' -ErrorAction SilentlyContinue
+          Write-Host ("остались процессы: " + @($procs).Count)
+          if (@($left).Count -gt 0 -or @($procs).Count -gt 0) { exit 1 }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-screenshot
+          path: smoke.png
+          if-no-files-found: ignore
+
       - uses: actions/upload-artifact@v4
         with:
           name: BPM-Studio-Pro-Windows
