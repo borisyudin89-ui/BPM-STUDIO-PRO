@@ -86,6 +86,7 @@ jobs:
           cat smoke.json || { echo 'нет результата'; tail -30 smoke.out; exit 1; }
           echo
           grep -q '"ok":true' smoke.json || exit 1
+          set +e +o pipefail
           LEFT=$(ls -d "${TMPDIR:-/tmp}"/bpm-studio-pro-* 2>/dev/null | wc -l | tr -d ' ')
           PROCS=$(pgrep -f 'ffmpeg-static|BPM Studio Pro' | wc -l | tr -d ' ')
           echo "остались временные папки: $LEFT"
