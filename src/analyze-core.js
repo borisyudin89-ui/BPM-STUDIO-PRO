@@ -71,33 +71,42 @@ function percentile(sorted, p) {
   return sorted[i];
 }
 
+// Наклон прямой «время бита ~ номер бита» (метод наименьших квадратов): не зависит от кривых первого и последнего бита.
+function slopePeriod(ticks) {
+  const n = ticks.length;
+  let sx = 0, sy = 0, sxx = 0, sxy = 0;
+  for (let i = 0; i < n; i++) { sx += i; sy += ticks[i]; sxx += i * i; sxy += i * ticks[i]; }
+  const d = n * sxx - sx * sx;
+  return d ? (n * sxy - sx * sy) / d : 0;
+}
+
 function tempoFromBeats(rhBpm, ticks) {
   let bpm = rhBpm;
   let spread = 0;
   let floating = false;
   const n = ticks.length;
+  let reg = 0;
   if (n >= 12) {
-    const span = ticks[n - 1] - ticks[0];
-    if (span > 0) {
-      const avg = toOctave((60 * (n - 1)) / span, rhBpm);
-      if (Math.abs(avg - rhBpm) / rhBpm < 0.03) bpm = avg;
-    }
+    const period = slopePeriod(ticks);
+    if (period > 0) reg = toOctave(60 / period, rhBpm);
     const W = 8;
     const w = [];
     for (let i = 0; i + W < n; i += 2) {
       const dt = ticks[i + W] - ticks[i];
-      if (dt > 0) w.push(toOctave((60 * W) / dt, bpm));
+      if (dt > 0) w.push(toOctave((60 * W) / dt, rhBpm));
     }
     if (w.length >= 3) {
       w.sort((a, b) => a - b);
       const range = percentile(w, 0.9) - percentile(w, 0.1);
       spread = range / 2;
-      floating = range / bpm > 0.03;
+      floating = range / rhBpm > 0.03;
     }
+    // ровный темп: берём оценку самого алгоритма; плавающий: среднее по всему треку
+    if (floating && reg && Math.abs(reg - rhBpm) / rhBpm < 0.1) bpm = reg;
   }
   const shown = foldBpm(bpm);
   const k = shown / bpm;
-  return { bpm: shown, spread: spread * k, floating, diag: { rh: rhBpm, ticks: n, first: ticks[0], last: ticks[n - 1], used: bpm } };
+  return { bpm: shown, spread: spread * k, floating, diag: { rh: rhBpm, reg, ticks: n } };
 }
 
 function analyzeKey(e, pcm) {
