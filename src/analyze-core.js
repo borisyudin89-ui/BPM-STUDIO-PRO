@@ -80,33 +80,45 @@ function slopePeriod(ticks) {
   return d ? (n * sxy - sx * sy) / d : 0;
 }
 
+function median(sorted) {
+  const n = sorted.length;
+  return n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2;
+}
+
+// Скользящие оценки темпа по W битам, свёрнутые к октаве опорного значения
+function windows(ticks, W, step, ref) {
+  const w = [];
+  for (let i = 0; i + W < ticks.length; i += step) {
+    const dt = ticks[i + W] - ticks[i];
+    if (dt > 0) w.push(toOctave((60 * W) / dt, ref));
+  }
+  return w.sort((a, b) => a - b);
+}
+
 function tempoFromBeats(rhBpm, ticks) {
+  // Оценка алгоритма (rhBpm) грубая: округляется до «корзин» ~0.6 BPM, поэтому уточняем по позициям битов.
   let bpm = rhBpm;
   let spread = 0;
   let floating = false;
   const n = ticks.length;
-  let reg = 0;
-  if (n >= 12) {
-    const period = slopePeriod(ticks);
-    if (period > 0) reg = toOctave(60 / period, rhBpm);
-    const W = 8;
-    const w = [];
-    for (let i = 0; i + W < n; i += 2) {
-      const dt = ticks[i + W] - ticks[i];
-      if (dt > 0) w.push(toOctave((60 * W) / dt, rhBpm));
+  if (n >= 24) {
+    // Медиана по длинным окнам: одиночные сбои трекера бита и квантование времени не влияют
+    const long = windows(ticks, 16, 1, rhBpm);
+    if (long.length >= 5) {
+      const med = median(long);
+      if (Math.abs(med - rhBpm) / rhBpm < 0.03) bpm = med;
     }
-    if (w.length >= 3) {
-      w.sort((a, b) => a - b);
-      const range = percentile(w, 0.8) - percentile(w, 0.2); // 20–80%: одиночный сбой трекера бита не считается «плаванием»
+    const w = windows(ticks, 8, 2, rhBpm);
+    if (w.length >= 5) {
+      // 20–80%: одиночный сбой трекера не считается «плаванием» темпа
+      const range = percentile(w, 0.8) - percentile(w, 0.2);
       spread = range / 2;
       floating = range / rhBpm > 0.03;
     }
-    // ровный темп: берём оценку самого алгоритма; плавающий: среднее по всему треку
-    if (floating && reg && Math.abs(reg - rhBpm) / rhBpm < 0.1) bpm = reg;
   }
   const shown = foldBpm(bpm);
   const k = shown / bpm;
-  return { bpm: shown, spread: spread * k, floating, diag: { rh: rhBpm, reg, ticks: n } };
+  return { bpm: shown, spread: spread * k, floating, diag: { rh: rhBpm, used: bpm, ticks: n } };
 }
 
 function analyzeKey(e, pcm) {
