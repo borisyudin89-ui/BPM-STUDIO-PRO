@@ -91,6 +91,7 @@ jobs:
           PROCS=$(pgrep -f 'ffmpeg-static|BPM Studio Pro' | wc -l | tr -d ' ')
           echo "остались временные папки: $LEFT"
           echo "остались процессы: $PROCS"
+          ls -d "${TMPDIR:-/tmp}"/bpm-studio-pro-* 2>/dev/null | while read d; do echo "DIR $d"; find "$d" -maxdepth 3 | head -20; done
           echo PNGBEGIN
           base64 < smoke.png | tr -d '\n' | fold -w 3000 | sed 's/^/PNG:/'
           echo
