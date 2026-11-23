@@ -49,6 +49,14 @@ function ff(args) {
       record('формат ' + ext, '128 ±0.5, не «плавает»', r.bpm + ', floating=' + r.floating, Math.abs(r.bpm - 128) <= 0.5 && r.floating === false);
     }
 
+    // 2b. скорость: 4-минутный трек должен анализироваться быстро
+    const longf = path.join(dir, 'long240.wav');
+    fs.writeFileSync(longf, wavBuffer(drumTrack(() => 126, 240)));
+    const t0 = Date.now();
+    const rl = await analyzeFile(longf);
+    const sec = (Date.now() - t0) / 1000;
+    record('скорость: трек 4 минуты', '< 12 с и 126 ±0.5', sec.toFixed(1) + ' с, ' + rl.bpm, sec < 12 && Math.abs(rl.bpm - 126) <= 0.5);
+
     // 3. путь с пробелами, скобками и кириллицей
     const odd = path.join(dir, 'Тест трек (1) ёж & co.wav');
     fs.copyFileSync(base, odd);

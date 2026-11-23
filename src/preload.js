@@ -2,7 +2,8 @@
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
-  pathsFromFiles: (files) => Array.from(files).map((f) => webUtils.getPathForFile(f)).filter(Boolean),
+  // File-объекты передаются по одному: список FileList через мост contextBridge теряет файлы
+  pathForFile: (file) => { try { return webUtils.getPathForFile(file); } catch (e) { return ''; } },
   expand: (paths) => ipcRenderer.invoke('expand', paths),
   analyze: (items) => ipcRenderer.invoke('analyze', items),
   cancel: () => ipcRenderer.invoke('cancel'),

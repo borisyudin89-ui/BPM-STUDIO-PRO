@@ -25,7 +25,7 @@ module.exports = async function smoke(win) {
     }
     const started = Date.now();
     let text = '';
-    while (Date.now() - started < (process.env.BPM_SMOKE_MODE === 'drop' ? 25000 : 90000)) {
+    while (Date.now() - started < 90000) {
       await new Promise((r) => setTimeout(r, 500));
       text = await wc.executeJavaScript(
         "(function(){var r=document.querySelector('#rows .row.item');return r?Array.from(r.children).map(function(c){return c.textContent}).join('|'):''})()"

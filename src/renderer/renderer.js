@@ -246,7 +246,8 @@
     e.preventDefault();
     $list.classList.remove('over');
     if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
-      addPaths(window.api.pathsFromFiles(e.dataTransfer.files));
+      const files = Array.from(e.dataTransfer.files);
+      addPaths(files.map((f) => window.api.pathForFile(f)).filter(Boolean));
     }
   });
 

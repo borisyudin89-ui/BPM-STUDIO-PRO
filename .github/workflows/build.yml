@@ -50,6 +50,7 @@ jobs:
         run: |
           node scripts/make-wav.js "$env:RUNNER_TEMP\smoke.wav" 128
           $env:BPM_SMOKE = '1'
+          $env:BPM_SMOKE_MODE = 'drop'
           $env:BPM_SMOKE_FILE = "$env:RUNNER_TEMP\smoke.wav"
           $env:BPM_SMOKE_OUT = "$PWD\smoke.png"
           $env:BPM_SMOKE_RESULT = "$PWD\smoke.json"
@@ -78,7 +79,7 @@ jobs:
           echo "app: $APP"
           codesign -dv "$APP" 2>&1 | head -5 || true
           echo "RunAsNode check:"; ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/BPM Studio Pro" -e "console.log('node ok', process.version)" || echo "RunAsNode НЕ работает"
-          export BPM_SMOKE=1 BPM_SMOKE_FILE="$RUNNER_TEMP/smoke.wav" BPM_SMOKE_OUT="$PWD/smoke.png" BPM_SMOKE_RESULT="$PWD/smoke.json"
+          export BPM_SMOKE=1 BPM_SMOKE_MODE=drop BPM_SMOKE_FILE="$RUNNER_TEMP/smoke.wav" BPM_SMOKE_OUT="$PWD/smoke.png" BPM_SMOKE_RESULT="$PWD/smoke.json"
           "$APP/Contents/MacOS/BPM Studio Pro" > smoke.out 2>&1 &
           PID=$!
           for i in $(seq 1 75); do kill -0 $PID 2>/dev/null || break; sleep 2; done
@@ -109,6 +110,7 @@ jobs:
 
   release:
     needs: build
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
