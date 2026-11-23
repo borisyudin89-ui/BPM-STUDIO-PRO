@@ -180,14 +180,18 @@ function cleanup() {
   cleaned = true;
   cancelAll();
   try { fs.rmSync(tmpData, { recursive: true, force: true }); } catch (e) { /* ignore */ }
-  if (fs.existsSync(tmpData)) {
-    // Chromium ещё держит файлы: удалим папку маленьким отдельным процессом сразу после выхода
+  {
+    // Chromium ещё пишет файлы при выходе (даже после нашей очистки): после завершения программы отдельный маленький процесс удаляет папку окончательно
     try {
       const { spawn } = require('child_process');
-      const code = "setTimeout(function(){try{require('fs').rmSync(process.env.BPM_TMP,{recursive:true,force:true})}catch(e){}},1200)";
+      const code = "var fs=require('fs'),d=process.env.BPM_TMP,p=+process.env.BPM_PID,n=0;" +
+        "function alive(){try{process.kill(p,0);return true}catch(e){return false}}" +
+        "(function t(){if(alive()&&n<40){n++;return setTimeout(t,250)}" +
+        "var k=0;(function r(){try{fs.rmSync(d,{recursive:true,force:true})}catch(e){}" +
+        "if(fs.existsSync(d)&&k<20){k++;return setTimeout(r,500)}})()})()";
       spawn(process.execPath, ['-e', code], {
         detached: true, stdio: 'ignore', windowsHide: true,
-        env: { ELECTRON_RUN_AS_NODE: '1', BPM_TMP: tmpData }
+        env: { ELECTRON_RUN_AS_NODE: '1', BPM_TMP: tmpData, BPM_PID: String(process.pid) }
       }).unref();
     } catch (e) { /* ignore */ }
   }

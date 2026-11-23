@@ -77,12 +77,13 @@ jobs:
           APP=$(ls -d dist/mac*/*.app | head -1)
           echo "app: $APP"
           codesign -dv "$APP" 2>&1 | head -5 || true
+          echo "RunAsNode check:"; ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/BPM Studio Pro" -e "console.log('node ok', process.version)" || echo "RunAsNode НЕ работает"
           export BPM_SMOKE=1 BPM_SMOKE_FILE="$RUNNER_TEMP/smoke.wav" BPM_SMOKE_OUT="$PWD/smoke.png" BPM_SMOKE_RESULT="$PWD/smoke.json"
           "$APP/Contents/MacOS/BPM Studio Pro" > smoke.out 2>&1 &
           PID=$!
           for i in $(seq 1 75); do kill -0 $PID 2>/dev/null || break; sleep 2; done
           if kill -0 $PID 2>/dev/null; then kill -9 $PID; echo 'smoke: зависло'; tail -20 smoke.out; exit 1; fi
-          sleep 5
+          sleep 12
           cat smoke.json || { echo 'нет результата'; tail -30 smoke.out; exit 1; }
           echo
           grep -q '"ok":true' smoke.json || exit 1
