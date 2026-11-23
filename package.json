@@ -1,7 +1,7 @@
 {
   "name": "bpm-studio-pro",
   "productName": "BPM Studio Pro",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "BPM Studio Pro — определение темпа и тональности аудиофайлов",
   "main": "src/main.js",
   "author": "BPM Studio Pro",
