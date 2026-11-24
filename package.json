@@ -1,7 +1,7 @@
 {
   "name": "bpm-studio-pro",
   "productName": "BPM Studio Pro",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "BPM Studio Pro — определение темпа и тональности аудиофайлов",
   "main": "src/main.js",
   "author": "BPM Studio Pro",
@@ -41,7 +41,7 @@
     ],
     "publish": null,
     "win": {
-      "icon": "build/icon.png",
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -60,7 +60,7 @@
     "afterPack": "scripts/adhoc-sign.js",
     "mac": {
       "category": "public.app-category.music",
-      "icon": "build/icon.png",
+      "icon": "build/icon.icns",
       "identity": null,
       "target": [
         {

@@ -4,10 +4,6 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-const N = 1024; // большой размер: из него система сама делает маленькие иконки плавно
-const SS = 4; // сглаживание: каждый пиксель считается по 4x4 подточкам
-const F = N / 512;
-const px = Buffer.alloc(N * N * 4);
 const BG = [0x1A, 0x1C, 0x1F];
 const BLUE = [0x7A, 0x9C, 0xC6];
 
@@ -46,35 +42,45 @@ function strokeBody(x, y, half) {
   return false;
 }
 
+// (x, y) — в координатах рисунка 512x512
 // Иконка «Свет»: синяя плитка на весь холст, графитовый метроном
 function sample(x, y) {
-  x = x / F; y = y / F;
   // плитка занимает почти весь холст (как у стандартных иконок): масштаб 1.086 от центра
   x = 256 + (x - 256) / 1.086;
   y = 256 + (y - 256) / 1.086;
   if (!inRRect(x, y, 24, 24, 488, 488, 104)) return null;
-  if (strokeBody(x, y, 10)) return BG;
-  if (distSeg(x, y, 170, 404, 342, 404) <= 10) return BG;
-  if (distSeg(x, y, 256, 372, 296, 196) <= 7) return BG;
-  if (Math.hypot(x - 285, y - 246) <= 19) return BG;
+  // знак крупнее и линии толще, чтобы читался в маленьком размере (30–40 px)
+  x = 256 + (x - 256) / 1.3;
+  y = 261 + (y - 261) / 1.3;
+  if (strokeBody(x, y, 14)) return BG;
+  if (distSeg(x, y, 170, 404, 342, 404) <= 14) return BG;
+  if (distSeg(x, y, 256, 372, 296, 196) <= 10) return BG;
+  if (Math.hypot(x - 285, y - 246) <= 25) return BG;
   return BLUE;
 }
 
-for (let y = 0; y < N; y++) {
-  for (let x = 0; x < N; x++) {
-    let r = 0, g = 0, b = 0, n = 0;
-    for (let j = 0; j < SS; j++) {
-      for (let i = 0; i < SS; i++) {
-        const c = sample(x + (i + 0.5) / SS, y + (j + 0.5) / SS);
-        if (c) { r += c[0]; g += c[1]; b += c[2]; n++; }
+// Каждый размер рисуем заново с нуля (а не уменьшаем большую картинку) — так линии всегда чёткие.
+function render(N) {
+  const SS = N <= 64 ? 8 : 4; // сглаживание: каждый пиксель считается по SS x SS подточкам
+  const px = Buffer.alloc(N * N * 4);
+  const k = 512 / N;
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let j = 0; j < SS; j++) {
+        for (let i = 0; i < SS; i++) {
+          const c = sample((x + (i + 0.5) / SS) * k, (y + (j + 0.5) / SS) * k);
+          if (c) { r += c[0]; g += c[1]; b += c[2]; n++; }
+        }
+      }
+      const o = (y * N + x) * 4;
+      if (n) {
+        px[o] = Math.round(r / n); px[o + 1] = Math.round(g / n); px[o + 2] = Math.round(b / n);
+        px[o + 3] = Math.round((255 * n) / (SS * SS));
       }
     }
-    const o = (y * N + x) * 4;
-    if (n) {
-      px[o] = Math.round(r / n); px[o + 1] = Math.round(g / n); px[o + 2] = Math.round(b / n);
-      px[o + 3] = Math.round((255 * n) / (SS * SS));
-    }
   }
+  return px;
 }
 
 const crcTable = new Uint32Array(256).map((_, n) => {
@@ -93,18 +99,56 @@ function chunk(type, data) {
   const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(td));
   return Buffer.concat([len, td, crc]);
 }
-const raw = Buffer.alloc((N * 4 + 1) * N);
-for (let y = 0; y < N; y++) {
-  raw[y * (N * 4 + 1)] = 0;
-  px.copy(raw, y * (N * 4 + 1) + 1, y * N * 4, (y + 1) * N * 4);
+function encodePng(N, px) {
+  const raw = Buffer.alloc((N * 4 + 1) * N);
+  for (let y = 0; y < N; y++) {
+    raw[y * (N * 4 + 1)] = 0;
+    px.copy(raw, y * (N * 4 + 1) + 1, y * N * 4, (y + 1) * N * 4);
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(N, 0); ihdr.writeUInt32BE(N, 4); ihdr[8] = 8; ihdr[9] = 6;
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
+    chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))
+  ]);
 }
-const ihdr = Buffer.alloc(13);
-ihdr.writeUInt32BE(N, 0); ihdr.writeUInt32BE(N, 4); ihdr[8] = 8; ihdr[9] = 6;
-const png = Buffer.concat([
-  Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
-  chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw, { level: 9 })), chunk('IEND', Buffer.alloc(0))
-]);
-const out = path.join(__dirname, '..', 'build', 'icon.png');
-fs.mkdirSync(path.dirname(out), { recursive: true });
-fs.writeFileSync(out, png);
-console.log('icon written', out, png.length, 'bytes');
+
+const cache = {};
+const pngOf = (n) => (cache[n] = cache[n] || encodePng(n, render(n)));
+
+// Windows .ico: набор готовых размеров (PNG внутри)
+function makeIco(sizes) {
+  const head = Buffer.alloc(6); head.writeUInt16LE(1, 2); head.writeUInt16LE(sizes.length, 4);
+  const dir = []; const datas = [];
+  let off = 6 + 16 * sizes.length;
+  for (const n of sizes) {
+    const d = pngOf(n);
+    const e = Buffer.alloc(16);
+    e[0] = n >= 256 ? 0 : n; e[1] = n >= 256 ? 0 : n;
+    e.writeUInt16LE(1, 4); e.writeUInt16LE(32, 6);
+    e.writeUInt32LE(d.length, 8); e.writeUInt32LE(off, 12);
+    off += d.length; dir.push(e); datas.push(d);
+  }
+  return Buffer.concat([head, ...dir, ...datas]);
+}
+
+// Mac .icns: те же PNG, разложенные по типам
+function makeIcns() {
+  const types = [['icp4', 16], ['icp5', 32], ['icp6', 64], ['ic07', 128], ['ic08', 256], ['ic09', 512], ['ic10', 1024],
+    ['ic11', 32], ['ic12', 64], ['ic13', 256], ['ic14', 512]];
+  const parts = types.map(([t, n]) => {
+    const d = pngOf(n);
+    const h = Buffer.alloc(8); h.write(t, 0, 'latin1'); h.writeUInt32BE(d.length + 8, 4);
+    return Buffer.concat([h, d]);
+  });
+  const total = 8 + parts.reduce((a, b) => a + b.length, 0);
+  const h = Buffer.alloc(8); h.write('icns', 0, 'latin1'); h.writeUInt32BE(total, 4);
+  return Buffer.concat([h, ...parts]);
+}
+
+const dir = path.join(__dirname, '..', 'build');
+fs.mkdirSync(dir, { recursive: true });
+fs.writeFileSync(path.join(dir, 'icon.png'), pngOf(1024));
+fs.writeFileSync(path.join(dir, 'icon.ico'), makeIco([16, 20, 24, 32, 40, 48, 64, 128, 256]));
+fs.writeFileSync(path.join(dir, 'icon.icns'), makeIcns());
+console.log('icons written to', dir);
