@@ -1,14 +1,14 @@
 'use strict';
-// Рисует иконку приложения («Волна»: графит + синие круги) в build/icon.png без внешних библиотек.
+// Рисует иконку приложения («Свет»: синяя плитка + графитовый метроном) в build/icon.png без внешних библиотек.
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
-const N = 512;
+const N = 1024; // большой размер: из него система сама делает маленькие иконки плавно
 const SS = 4; // сглаживание: каждый пиксель считается по 4x4 подточкам
+const F = N / 512;
 const px = Buffer.alloc(N * N * 4);
 const BG = [0x1A, 0x1C, 0x1F];
-const LINE = [0x4A, 0x52, 0x5C];
 const BLUE = [0x7A, 0x9C, 0xC6];
 
 function inRRect(x, y, x0, y0, x1, y1, r) {
@@ -18,20 +18,46 @@ function inRRect(x, y, x0, y0, x1, y1, r) {
   return (x - cx) * (x - cx) + (y - cy) * (y - cy) <= r * r;
 }
 
-// Иконка «Волна»: графитовая плитка, в центре точка и два расходящихся кольца
+function distSeg(px_, py_, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const t = Math.max(0, Math.min(1, ((px_ - ax) * dx + (py_ - ay) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(px_ - (ax + t * dx), py_ - (ay + t * dy));
+}
+
+// контур корпуса метронома (замкнутая ломаная, углы сверху скруглены кривыми)
+const body = [[200, 404], [226, 132]];
+for (let i = 1; i <= 12; i++) { // Q 228 118 242 118
+  const t = i / 12, u = 1 - t;
+  body.push([u * u * 226 + 2 * u * t * 228 + t * t * 242, u * u * 132 + 2 * u * t * 118 + t * t * 118]);
+}
+body.push([270, 118]);
+for (let i = 1; i <= 12; i++) { // Q 284 118 286 132
+  const t = i / 12, u = 1 - t;
+  body.push([u * u * 270 + 2 * u * t * 284 + t * t * 286, u * u * 118 + 2 * u * t * 118 + t * t * 132]);
+}
+body.push([312, 404]);
+
+function strokeBody(x, y, half) {
+  if (x < 180 || x > 332 || y < 100 || y > 424) return false;
+  for (let i = 0; i < body.length; i++) {
+    const a = body[i], b = body[(i + 1) % body.length];
+    if (distSeg(x, y, a[0], a[1], b[0], b[1]) <= half) return true;
+  }
+  return false;
+}
+
+// Иконка «Свет»: синяя плитка на весь холст, графитовый метроном
 function sample(x, y) {
+  x = x / F; y = y / F;
   // плитка занимает почти весь холст (как у стандартных иконок): масштаб 1.086 от центра
   x = 256 + (x - 256) / 1.086;
   y = 256 + (y - 256) / 1.086;
   if (!inRRect(x, y, 24, 24, 488, 488, 104)) return null;
-  let c = inRRect(x, y, 29, 29, 483, 483, 99) ? BG : LINE;
-  const d = Math.hypot(x - 256, y - 256);
-  let a = 0;
-  if (d <= 62) a = 1;
-  else if (Math.abs(d - 136) <= 12) a = 0.85;
-  else if (Math.abs(d - 206) <= 12) a = 0.55;
-  if (a) c = [0, 1, 2].map((i) => c[i] * (1 - a) + BLUE[i] * a);
-  return c;
+  if (strokeBody(x, y, 10)) return BG;
+  if (distSeg(x, y, 170, 404, 342, 404) <= 10) return BG;
+  if (distSeg(x, y, 256, 372, 296, 196) <= 7) return BG;
+  if (Math.hypot(x - 285, y - 246) <= 19) return BG;
+  return BLUE;
 }
 
 for (let y = 0; y < N; y++) {
