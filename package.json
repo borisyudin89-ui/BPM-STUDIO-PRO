@@ -1,7 +1,7 @@
 {
   "name": "bpm-studio-pro",
   "productName": "BPM Studio Pro",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "BPM Studio Pro — определение темпа и тональности аудиофайлов",
   "main": "src/main.js",
   "author": "BPM Studio Pro",
@@ -10,7 +10,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node test/run.js",
-    "icon": "node scripts/make-icon.js",
+    "icon": "python3 scripts/make-icon.py",
     "dist": "electron-builder --win --x64",
     "dist:mac": "electron-builder --mac dmg"
   },
