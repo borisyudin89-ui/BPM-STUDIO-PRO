@@ -11,7 +11,7 @@ def squircle(S,m,nexp=5.0):
     return (v<=1).astype(np.uint8)*255
 def blur(a,r): return np.asarray(Image.fromarray(a.astype('uint8') if a.dtype!=np.uint8 else a).filter(ImageFilter.GaussianBlur(r)),float)
 def render(n,c1,c2,sub=True):
-    S=n*4; m=S*0.055
+    S=n*4; m=S*0.012
     mask=squircle(S,m); mf=mask/255.0
     yy,xx=np.mgrid[0:S,0:S]/ S if False else (None,None)
     gy,gx=np.mgrid[0:S,0:S]; gx=gx/S; gy=gy/S
@@ -32,14 +32,14 @@ def render(n,c1,c2,sub=True):
     tile=np.dstack([np.clip(base,0,255),mask]).astype('uint8')
     out=Image.new('RGBA',(S,S),(0,0,0,0))
     # тень плитки
-    so=blur(mask,S*0.022)*0.38; so=np.roll(so,int(S*0.018),axis=0)
+    so=blur(mask,S*0.008)*0.28; so=np.roll(so,int(S*0.006),axis=0)
     shadow=np.zeros((S,S,4),np.uint8); shadow[...,:3]=(c2*0.35).astype('uint8'); shadow[...,3]=so.astype('uint8')
     out=Image.alpha_composite(out,Image.fromarray(shadow,'RGBA'))
     out=Image.alpha_composite(out,Image.fromarray(tile,'RGBA'))
     # надпись
     D=ImageDraw.Draw(out)
     f=ImageFont.truetype(BK,100); w=D.textlength('BPM',font=f)
-    f=ImageFont.truetype(BK,int(100*S*0.62/w))
+    f=ImageFont.truetype(BK,int(100*S*0.68/w))
     cy=S*(0.455 if sub else 0.5)
     tm=Image.new('L',(S,S),0); ImageDraw.Draw(tm).text((S/2,cy),'BPM',font=f,fill=255,anchor='mm')
     ta=np.asarray(tm,float)
@@ -51,7 +51,7 @@ def render(n,c1,c2,sub=True):
     lt=np.dstack([np.clip(wcol,0,255),ta]).astype('uint8')
     out=Image.alpha_composite(out,Image.fromarray(lt,'RGBA'))
     if sub:
-        fs=ImageFont.truetype(SB,max(8,int(S*0.052)))
+        fs=ImageFont.truetype(SB,max(8,int(S*0.057)))
         txt='STUDIO PRO'; sp=S*0.018
         wtot=sum(D.textlength(ch,font=fs) for ch in txt)+sp*(len(txt)-1)
         x=S/2-wtot/2; layer=Image.new('RGBA',(S,S),(0,0,0,0)); ld=ImageDraw.Draw(layer)
